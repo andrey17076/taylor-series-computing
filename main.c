@@ -6,65 +6,89 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+#define TWO_PI 6.28
+#define ARG_NUMB 4
+
+char util_name[FILENAME_MAX];
+
+void print_err(const char *error_msg) {
+    fprintf(stderr, "%s: %s\n", util_name, error_msg);
+    exit(-1);
+}
 
 int main (int argc, char const *argv[]) {
-    char util_name[FILENAME_MAX];
-    FILE *tmp_file;
-    pid_t pid;
 
     strcpy(util_name, (char*) basename(argv[0]));
+    int number_of_members, set_length;
 
-    if (argc != 3) {
-        fprintf(stderr, "%s: Wrong number of arguments\n", util_name);
+    if (argc != ARG_NUMB)
+        print_err("Wrong number of arguments");
+
+    if ((number_of_members = atoi(argv[1])) == 0)
+        print_err("Number of members must be positive");
+
+    if ((set_length = atoi(argv[2])) == 0)
+        print_err("Taylor set length must be positive");
+
+    const char *tmp_filename = "/tmp/tmp.txt";
+    FILE *tmp_file;
+
+    if ((tmp_file = fopen(tmp_filename, "w+r")) == NULL) {
+        fprintf(stderr, "%s: %s: %s\n",
+            util_name,
+            tmp_filename,
+            strerror(errno)
+        );
         return -1;
     }
 
-    if (argv[1] < 0 || argv[2] < 0) {
-        fprintf(stderr,"%s: Options must be positive\n", util_name);
-        return -1;
-    }
-
-    if ((tmp_file = fopen("/tmp/tmp.txt", "w+r")) == NULL) {
-        fprintf(stderr, "%s: /tmp/tmp.txt: %s\n", util_name, strerror(errno));
-        return -1;
-    }
-
-    int number_of_members = atoi(argv[1]);
-    int set_length = atoi(argv[2]);
     int i, j, k;
-    double x, member, sum;
+    double x, member;
+    pid_t pid;
 
     for (i = 0; i < number_of_members; i++) {
-        x = 6.28 * i / number_of_members;
+        x = TWO_PI * i / number_of_members;
         for (j = 0; j < set_length; j++) {
             pid = fork ();
             if (pid == 0) {
                 member = (j % 2) ? -1 : 1;
-                for (k = 1; k <= 2 * j + 1; k++)
-                    member *= x/k;
+                for (k = 1; k <= 2 * j + 1; member *= x/k++);
                 printf("%d %d %f\n", getpid(), i, member);
                 fprintf(tmp_file, "%d %d %f\n", getpid(), i, member);
                 exit(0);
-            } else {
+            } else if (pid > 0) {
                 waitpid(pid);
+            } else {
+                fprintf(stderr, "%s: %s\n", util_name, strerror(errno));
             }
         }
     }
 
-    printf("===================\n");
+    char result_filename[FILENAME_MAX];
+    FILE *result_file;
+    realpath(argv[3], result_filename);
+
+    if ((result_file = fopen(result_filename, "w+")) == NULL) {
+        fprintf(stderr, "%s: %s: %s\n",
+            util_name,
+            result_filename,
+            strerror(errno));
+        return -1;
+    }
+
     rewind(tmp_file);
-    i = 0;
-    j = 0;
-    sum = 0;
-    while (!feof(tmp_file) {
+    double sum = 0;
+    i = j = 0;
+
+    while (!feof(tmp_file) && j < number_of_members) {
         fscanf(tmp_file, "%d %d %lf", &pid, &k, &member);
-        printf("%d %d %f\n", pid, k, member);
         sum += member;
-        if (++i == number_of_members) {
-            printf("y[%d] = %f\n", j++, sum);
-            i = 1;
-            sum = 0;
+        if (++i == set_length) {
+            fprintf(result_file, "y[%d] = %f\n", j++, sum);
+            i = sum = 0;
         }
     }
+
     fclose(tmp_file);
+    fclose(result_file);
 }
