@@ -9,7 +9,7 @@
 
 int main (int argc, char const *argv[]) {
     char util_name[FILENAME_MAX];
-    int tmp_file;
+    FILE *tmp_file;
     pid_t pid;
 
     strcpy(util_name, (char*) basename(argv[0]));
@@ -24,7 +24,7 @@ int main (int argc, char const *argv[]) {
         return -1;
     }
 
-    if ((tmp_file = open("/tmp/tmp.txt", O_RDWR | O_CREAT | O_TRUNC, 0777)) == 0) {
+    if ((tmp_file = fopen("/tmp/tmp.txt", "a+r")) == NULL) {
         fprintf(stderr, "%s: /tmp/tmp.txt: %s\n", util_name, strerror(errno));
         return -1;
     }
@@ -42,15 +42,14 @@ int main (int argc, char const *argv[]) {
                 double member = (j % 2) ? -1 : 1;
                 for (k = 1; k <= 2 * j + 1; k++)
                     member *= x/k;
-                char buffer[64];
-                sprintf(buffer, "%d %d %f\n", getpid(), i, member);
-                printf("%s\n", buffer);
-                write(tmp_file, buffer, 64);
+
+                printf("%d %d %f\n", getpid(), i, member);
+                fprintf(tmp_file, "%d %d %f\n", getpid(), i, member);
                 exit(0);
             }
         }
     }
 
 
-    close(tmp_file);
+    fclose(tmp_file);
 }
