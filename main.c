@@ -24,7 +24,7 @@ int main (int argc, char const *argv[]) {
         return -1;
     }
 
-    if ((tmp_file = fopen("/tmp/tmp.txt", "a+r")) == NULL) {
+    if ((tmp_file = fopen("/tmp/tmp.txt", "w+r")) == NULL) {
         fprintf(stderr, "%s: /tmp/tmp.txt: %s\n", util_name, strerror(errno));
         return -1;
     }
@@ -32,24 +32,39 @@ int main (int argc, char const *argv[]) {
     int number_of_members = atoi(argv[1]);
     int set_length = atoi(argv[2]);
     int i, j, k;
+    double x, member, sum;
 
     for (i = 0; i < number_of_members; i++) {
-        double sum = 0;
-        double x = 6.28 * i / number_of_members;
+        x = 6.28 * i / number_of_members;
         for (j = 0; j < set_length; j++) {
             pid = fork ();
             if (pid == 0) {
-                double member = (j % 2) ? -1 : 1;
+                member = (j % 2) ? -1 : 1;
                 for (k = 1; k <= 2 * j + 1; k++)
                     member *= x/k;
-
                 printf("%d %d %f\n", getpid(), i, member);
                 fprintf(tmp_file, "%d %d %f\n", getpid(), i, member);
                 exit(0);
+            } else {
+                waitpid(pid);
             }
         }
     }
 
-
+    printf("===================\n");
+    rewind(tmp_file);
+    i = 0;
+    j = 0;
+    sum = 0;
+    while (!feof(tmp_file) {
+        fscanf(tmp_file, "%d %d %lf", &pid, &k, &member);
+        printf("%d %d %f\n", pid, k, member);
+        sum += member;
+        if (++i == number_of_members) {
+            printf("y[%d] = %f\n", j++, sum);
+            i = 1;
+            sum = 0;
+        }
+    }
     fclose(tmp_file);
 }
