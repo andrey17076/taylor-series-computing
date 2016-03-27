@@ -80,18 +80,19 @@ int main (int argc, char const *argv[]) {
     }
 
     rewind(tmp_file);
-    double sum = 0;
-    i = j = 0;
+    double *members;
+    members = malloc(sizeof(double)*number_of_members);
 
-    while (!feof(tmp_file) && j < number_of_members) {
-        fscanf(tmp_file, "%d %d %lf", &pid, &k, &member);
-        sum += member;
-        if (++i == set_length) {
-            fprintf(result_file, "y[%d] = %f\n", j++, sum);
-            i = sum = 0;
-        }
+    while (!feof(tmp_file)) {
+        fscanf(tmp_file, "%d %d %lf", &pid, &i, &member);
+        members[i] += member;
     }
 
+    for (i = 0; i < number_of_members; i++) {
+        fprintf(result_file, "y[%d] = %f\n", i, members[i]);
+    }
+
+    free(members);
     fclose(tmp_file);
     fclose(result_file);
 }
