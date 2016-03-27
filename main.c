@@ -6,7 +6,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#define TWO_PI 6.28
+#define PI 3.14
 #define ARG_NUMB 4
 
 char util_name[FILENAME_MAX];
@@ -47,7 +47,10 @@ int main (int argc, char const *argv[]) {
     pid_t pid;
 
     for (i = 0; i < number_of_members; i++) {
-        x = TWO_PI * i / number_of_members;
+        x = (2 * PI * i / number_of_members);
+        if (x > PI) {
+            x = PI - x;
+        }
         for (j = 0; j < set_length; j++) {
             pid = fork ();
             if (pid == 0) {
