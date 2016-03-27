@@ -19,7 +19,7 @@ void print_err(const char *error_msg) {
 int main (int argc, char const *argv[]) {
 
     strcpy(util_name, (char*) basename(argv[0]));
-    int number_of_members, set_length;
+    int number_of_members, taylor_set_length;
 
     if (argc != ARG_NUMB)
         print_err("Wrong number of arguments");
@@ -27,7 +27,7 @@ int main (int argc, char const *argv[]) {
     if ((number_of_members = atoi(argv[1])) == 0)
         print_err("Number of members must be positive");
 
-    if ((set_length = atoi(argv[2])) == 0)
+    if ((taylor_set_length = atoi(argv[2])) == 0)
         print_err("Taylor set length must be positive");
 
     const char *tmp_filename = "/tmp/tmp.txt";
@@ -43,27 +43,33 @@ int main (int argc, char const *argv[]) {
     }
 
     int i, j, k;
-    double x, member;
+    double x, set_element;
     pid_t pid;
+    int running_processes = 0;
 
     for (i = 0; i < number_of_members; i++) {
         x = (2 * PI * i / number_of_members);
         if (x > PI) {
             x = PI - x;
         }
-        for (j = 0; j < set_length; j++) {
+
+        for (j = 0; j < taylor_set_length; j++) {
+            if (running_processes == taylor_set_length){
+                wait(NULL);
+                running_processes--;
+            }
+
             pid = fork ();
             if (pid == 0) {
-                member = (j % 2) ? -1 : 1;
-                for (k = 1; k <= 2 * j + 1; member *= x/k++);
-                printf("%d %d %f\n", getpid(), i, member);
-                fprintf(tmp_file, "%d %d %f\n", getpid(), i, member);
+                set_element = (j % 2) ? -1 : 1;
+                for (k = 1; k <= 2 * j + 1; set_element *= x/k++);
+                printf("%d %d %f\n", getpid(), i, set_element);
+                fprintf(tmp_file, "%d %d %f\n", getpid(), i, set_element);
                 exit(0);
-            } else if (pid > 0) {
-                waitpid(pid);
-            } else {
+            } else if (pid == -1) {
                 fprintf(stderr, "%s: %s\n", util_name, strerror(errno));
             }
+            running_processes++;
         }
     }
 
@@ -84,8 +90,8 @@ int main (int argc, char const *argv[]) {
     members = malloc(sizeof(double)*number_of_members);
 
     while (!feof(tmp_file)) {
-        fscanf(tmp_file, "%d %d %lf", &pid, &i, &member);
-        members[i] += member;
+        fscanf(tmp_file, "%d %d %lf", &pid, &i, &set_element);
+        members[i] += set_element;
     }
 
     for (i = 0; i < number_of_members; i++) {
